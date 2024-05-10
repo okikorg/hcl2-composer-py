@@ -1,7 +1,0 @@
-README.md
-setup.py
-okik.egg-info/PKG-INFO
-okik.egg-info/SOURCES.txt
-okik.egg-info/dependency_links.txt
-okik.egg-info/requires.txt
-okik.egg-info/top_level.txt
