@@ -8,7 +8,7 @@ with open("./requirements.txt") as f:
     required = f.read().splitlines()
 
 setup(
-    name="okik",
+    name="py2hcl2",
     version=__version__,
     packages=find_packages(),
     author="Okik",
