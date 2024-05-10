@@ -7,7 +7,10 @@ class BlockType(Enum):
     RESOURCE = "resource"
     DATA = "data"
     PROVIDER = "provider"
-    CONFIG = "terraform"
+    TERRAFORM = "terraform"
+    MODULE = "module"
+    VARIABLE = "variable"
+    OUTPUT = "output"
 
 # Special wrapper for "asis" type
 class AsIs(str):
@@ -19,7 +22,7 @@ class TerraformBase:
     def __init__(self, node_type: BlockType):
         self.node_type = node_type
 
-    def generate_terraform(self, instance: BaseModel, type_name: Optional[str] = None, resource_name: Optional[str] = None) -> Optional[str]:
+    def generate_block(self, instance: BaseModel, type_name: Optional[str] = None, resource_name: Optional[str] = None) -> Optional[str]:
         # Skip generation if both type_name and resource_name are None
         if type_name is None and resource_name is None:
             return None
