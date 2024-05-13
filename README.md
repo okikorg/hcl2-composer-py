@@ -27,6 +27,20 @@ instance_count = InstanceCount(description="Number of instances to create", type
 HclBlockManager.export("output.tf")
 ```
 
+## Output
+```hcl
+
+resource "ec2-instance" "vm1" {
+  cores  = 2
+  memory = 4
+}
+
+variable "instance_count" {
+  description = "Number of instances to create"
+  type        = "number"
+  default     = [1]
+}
+```
 ## Features
 `HclBlockManager`: Manages registration and export of all HCL blocks.
 `hcl_block` Decorator: Generalized for all BlockType values, registers instances with HclBlockManager, and provides a hcl_block property for easy access.
