@@ -1,6 +1,6 @@
 from enum import Enum
 from typing import Any, Dict, List, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, PrivateAttr
 
 class BlockType(Enum):
     RESOURCE = "resource"
@@ -75,3 +75,23 @@ class HclBase:
         if isinstance(value, int):
             return str(value)
         return f'"{value}"'
+
+# Generalized Decorator
+def hcl_block(block_type: BlockType, type_name: Optional[str] = None, resource_name: Optional[str] = None):
+    def decorator(cls):
+        cls._hcl_block = PrivateAttr()
+
+        original_init = cls.__init__
+        def new_init(self, *args, **kwargs):
+            original_init(self, *args, **kwargs)
+            hcl_base = HclBase(block_type)
+            self._hcl_block = hcl_base.generate_block(self, type_name, resource_name)
+
+        @property
+        def hcl_block(self):
+            return self._hcl_block
+
+        cls.__init__ = new_init
+        cls.hcl_block = hcl_block
+        return cls
+    return decorator
