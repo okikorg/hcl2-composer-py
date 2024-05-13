@@ -19,6 +19,3 @@ setup(
     ],
     python_requires=">=3.6",
 )
-[build-system]
-requires = ["setuptools", "wheel"]
-build-backend = "setuptools.build_meta"
