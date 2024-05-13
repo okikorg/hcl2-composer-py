@@ -26,3 +26,7 @@ instance_count = InstanceCount(description="Number of instances to create", type
 # Export all blocks to a single .tf file
 HclBlockManager.export("output.tf")
 ```
+
+## Features
+`HclBlockManager`: Manages registration and export of all HCL blocks.
+`hcl_block` Decorator: Generalized for all BlockType values, registers instances with HclBlockManager, and provides a hcl_block property for easy access.
