@@ -12,6 +12,7 @@ logging.basicConfig(
 )
 
 class BlockType(Enum):
+    NONE = "none"
     RESOURCE = "resource"
     DATA = "data"
     PROVIDER = "provider"
@@ -24,17 +25,19 @@ class HclBase:
     def __init__(self, node_type: BlockType):
         self.node_type = node_type
 
-    def generate_block(self, instance: BaseModel, type_name: Optional[str] = None, resource_name: Optional[str] = None) -> Optional[str]:
-        if type_name is None and resource_name is None:
+    def generate_block(self, instance: BaseModel, type: Optional[str] = None, reference_name: Optional[str] = None) -> Optional[str]:
+        if self.node_type != BlockType.NONE and type is None and reference_name is None:
             logging.debug(f"Skipping block generation for {instance}: type_name and resource_name are both None.")
             return None
 
-        resource_name = resource_name or ""
+        reference_name = reference_name or ""
 
-        if type_name and resource_name:
-            hcl_str = f'{self.node_type.value} "{type_name}" "{resource_name}" {{\n'
-        elif type_name:
-            hcl_str = f'{self.node_type.value} "{type_name}" {{\n'
+        if self.node_type == BlockType.NONE:
+            hcl_str = f'{self.node_type.value} {{\n'
+        elif type and reference_name:
+            hcl_str = f'{self.node_type.value} "{type}" "{reference_name}" {{\n'
+        elif type:
+            hcl_str = f'{self.node_type.value} "{type}" {{\n'
         else:
             hcl_str = f'{self.node_type.value} {{\n'
 
@@ -68,10 +71,10 @@ class HclBase:
         return nested_str
 
     def generate_dict_block(self, field_name: str, value_dict: Dict[str, Any]) -> str:
-        dict_str = f'  {field_name} = {{\n'
+        dict_str = f'  {field_name} {{\n'
         for k, v in value_dict.items():
-            if isinstance(v, BaseModel):
-                dict_str += self.generate_nested_block(k, v)
+            if isinstance(v, dict):
+                dict_str += self.generate_dict_block(k, v)
             else:
                 dict_str += f'    {k} = {self.format_value(v)}\n'
         dict_str += "  }\n"
@@ -79,7 +82,7 @@ class HclBase:
 
     def format_value(self, value: Any) -> str:
         if isinstance(value, str):
-            if value.startswith("file("):
+            if value.startswith("file(") or value.startswith("data."):
                 return value
             return f'"{value}"'
         if isinstance(value, bool):
@@ -115,7 +118,7 @@ class HclBlockManager:
                     logging.warning(f"Skipping None block for instance: {instance}")
 
 # Generalized Decorator
-def hcl_block(block_type: BlockType, type_name: Optional[str] = None, resource_name: Optional[str] = None):
+def hcl_block(block_type: BlockType, type: Optional[str] = None, reference_name: Optional[str] = None):
     def decorator(cls):
         cls._hcl_block = PrivateAttr()
 
@@ -123,7 +126,7 @@ def hcl_block(block_type: BlockType, type_name: Optional[str] = None, resource_n
         def new_init(self, *args, **kwargs):
             original_init(self, *args, **kwargs)
             hcl_base = HclBase(block_type)
-            self._hcl_block = hcl_base.generate_block(self, type_name, resource_name)
+            self._hcl_block = hcl_base.generate_block(self, type, reference_name)
             HclBlockManager.register(self)
 
         @property
