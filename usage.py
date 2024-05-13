@@ -1,4 +1,4 @@
-from py2hcl2.composer import hcl_block, BlockType
+from py2hcl2.composer import hcl_block, BlockType, HclBlockManager
 from typing import List
 from pydantic import BaseModel
 from rich import print
@@ -14,10 +14,9 @@ class InstanceCount(BaseModel):
     type: str
     default: List[int]
 
-# Instantiating the class will now automatically create the HCL block
+# Instantiating the classes
 resource_instance = Resource(cores=2, memory=4)
 instance_count = InstanceCount(description="Number of instances to create", type="number", default=[1])
 
-# Access the HCL block using the `hcl_block` property
-print(resource_instance.hcl_block)
-print(instance_count.hcl_block)
+# Export all blocks to a single .tf file
+HclBlockManager.export("combined_output.tf")

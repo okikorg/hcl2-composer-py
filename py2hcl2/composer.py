@@ -76,6 +76,19 @@ class HclBase:
             return str(value)
         return f'"{value}"'
 
+class HclBlockManager:
+    _registry: List[BaseModel] = []
+
+    @classmethod
+    def register(cls, instance: BaseModel):
+        cls._registry.append(instance)
+
+    @classmethod
+    def export(cls, filename: str = "output.tf"):
+        with open(filename, "w") as f:
+            for instance in cls._registry:
+                f.write(instance.hcl_block + "\n")
+
 # Generalized Decorator
 def hcl_block(block_type: BlockType, type_name: Optional[str] = None, resource_name: Optional[str] = None):
     def decorator(cls):
@@ -86,6 +99,7 @@ def hcl_block(block_type: BlockType, type_name: Optional[str] = None, resource_n
             original_init(self, *args, **kwargs)
             hcl_base = HclBase(block_type)
             self._hcl_block = hcl_base.generate_block(self, type_name, resource_name)
+            HclBlockManager.register(self)
 
         @property
         def hcl_block(self):
