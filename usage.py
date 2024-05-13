@@ -1,5 +1,5 @@
-from composer import TerraformBase, BlockType, AsIs
-from typing import List, Union
+from py2hcl2.composer import HclBase, BlockType
+from typing import List
 from pydantic import BaseModel
 from rich import print
 
@@ -12,16 +12,13 @@ class NewNode(BaseModel):
     platform_id: str
     resources: Resource
 
-new_node = NewNode(name="new-node", platform_id="ec2", resources=Resource(cores=2, memory=4))
-
-print(TerraformBase(BlockType.PROVIDER).generate_block(new_node, "ec2-instance", "vm1"))
 class InstanceCount(BaseModel):
     description: str
-    type: AsIs
-    default: List[int]
+    type: str
+    default: List[str]
 
-    class Config:
-        extra = "allow"
+new_node = NewNode(name="new-node", platform_id="ec2", resources=Resource(cores=2, memory=4))
+print(HclBase(BlockType.RESOURCE).generate_block(new_node, "ec2-instance", "vm1"))
 
-instance_count = InstanceCount(description="Number of instances to create", type="number", default=[1])
-print(TerraformBase(BlockType.TERRAFORM).generate_block(instance_count, "instance_count"))
+instance_count = InstanceCount(description="Number of instances to create", type="number", default=["1"])
+print(HclBase(BlockType.VARIABLE).generate_block(instance_count, "instance_count"))
