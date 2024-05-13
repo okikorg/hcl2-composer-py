@@ -19,4 +19,4 @@ resource_instance = Resource(cores=2, memory=4)
 instance_count = InstanceCount(description="Number of instances to create", type="number", default=[1])
 
 # Export all blocks to a single .tf file
-HclBlockManager.export("combined_output.tf")
+HclBlockManager.export("output.tf")

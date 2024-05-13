@@ -1,6 +1,15 @@
 from enum import Enum
 from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, PrivateAttr
+import logging
+from rich.logging import RichHandler
+
+# Setup logging
+logging.basicConfig(
+    level="INFO",  # Default to INFO level
+    format="%(message)s",
+    handlers=[RichHandler()]
+)
 
 class BlockType(Enum):
     RESOURCE = "resource"
@@ -17,6 +26,7 @@ class HclBase:
 
     def generate_block(self, instance: BaseModel, type_name: Optional[str] = None, resource_name: Optional[str] = None) -> Optional[str]:
         if type_name is None and resource_name is None:
+            logging.debug(f"Skipping block generation for {instance}: type_name and resource_name are both None.")
             return None
 
         resource_name = resource_name or ""
@@ -28,7 +38,8 @@ class HclBase:
         else:
             hcl_str = f'{self.node_type.value} {{\n'
 
-        for field_name, value in instance.dict().items():
+        for field_name, value in instance.dict(by_alias=True).items():
+            logging.debug(f"Processing field: {field_name} with value: {value}")
             if isinstance(value, BaseModel):
                 nested_str = self.generate_nested_block(field_name, value)
                 hcl_str += nested_str
@@ -43,11 +54,12 @@ class HclBase:
                 hcl_str += f'  {field_name} = {self.format_value(value)}\n'
 
         hcl_str += "}\n"
+        logging.debug(f"Generated block for {instance}: {hcl_str}")
         return hcl_str
 
     def generate_nested_block(self, field_name: str, nested_instance: BaseModel) -> str:
         nested_str = f'  {field_name} {{\n'
-        for sub_field_name, sub_value in nested_instance.dict().items():
+        for sub_field_name, sub_value in nested_instance.dict(by_alias=True).items():
             if isinstance(sub_value, BaseModel):
                 nested_str += self.generate_nested_block(sub_field_name, sub_value)
             else:
@@ -78,6 +90,15 @@ class HclBase:
 
 class HclBlockManager:
     _registry: List[BaseModel] = []
+    debug = False
+
+    @classmethod
+    def set_debug(cls, debug: bool):
+        cls.debug = debug
+        if cls.debug:
+            logging.getLogger().setLevel("DEBUG")
+        else:
+            logging.getLogger().setLevel("INFO")
 
     @classmethod
     def register(cls, instance: BaseModel):
@@ -87,7 +108,11 @@ class HclBlockManager:
     def export(cls, filename: str = "output.tf"):
         with open(filename, "w") as f:
             for instance in cls._registry:
-                f.write(instance.hcl_block + "\n")
+                block = instance.hcl_block
+                if block:  # Only write non-None blocks
+                    f.write(block + "\n")
+                else:
+                    logging.warning(f"Skipping None block for instance: {instance}")
 
 # Generalized Decorator
 def hcl_block(block_type: BlockType, type_name: Optional[str] = None, resource_name: Optional[str] = None):
