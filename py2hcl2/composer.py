@@ -121,33 +121,92 @@ class HclBase:
         else:
             raise TypeError(f"Unsupported type for value formatting: {type(value)}")
 
+
 class HclBlockManager:
     _registry: List[BaseModel] = []
-    debug = False
 
-    @classmethod
-    def set_debug(cls, debug: bool):
-        cls.debug = debug
-        if cls.debug:
+    def __init__(self):
+        self._registry = []
+        self.debug = False
+
+    def set_debug(self, debug: bool):
+        self.debug = debug
+        if self.debug:
             logging.getLogger().setLevel("DEBUG")
         else:
             logging.getLogger().setLevel("INFO")
 
-    @classmethod
-    def register(cls, instance: BaseModel):
-        cls._registry.append(instance)
+    def __iadd__(self, instance: BaseModel):
+        self.register(instance)
+        return self
 
-    @classmethod
-    def export(cls, filename: str = "output.tf"):
+    def register(self, instance: BaseModel):
+        if instance not in self._registry:  # Prevent adding the same instance twice
+            self._registry.append(instance)
+
+    def export(self, filename: str = "output.tf"):
         with open(filename, "w") as f:
-            for instance in cls._registry:
-                block = instance.hcl_block # type: ignore
-                if block:  # Only write non-None blocks
-                    f.write(block + "\n")
-                else:
-                    logging.warning(f"Skipping None block for instance: {instance}")
+            self.write_blocks(f)
 
-# Generalized Decorator
+    def append(self, filename: str):
+        with open(filename, "a") as f:  # Open the file in append mode
+            self.write_blocks(f)
+
+    def write_blocks(self, file):
+        for instance in self._registry:
+            block = instance.hcl_block  # Assume each BaseModel has an hcl_block property
+            if block:  # Only write non-None blocks
+                file.write(block + "\n")
+            else:
+                logging.warning(f"Skipping None block for instance: {instance}")
+
+# class HclBlockManager:
+#     _registry: List[BaseModel] = []
+#     debug = False
+
+#     @classmethod
+#     def set_debug(cls, debug: bool):
+#         cls.debug = debug
+#         if cls.debug:
+#             logging.getLogger().setLevel("DEBUG")
+#         else:
+#             logging.getLogger().setLevel("INFO")
+
+#     @classmethod
+#     def register(cls, instance: BaseModel):
+#         cls._registry.append(instance)
+
+#     @classmethod
+#     def export(cls, filename: str = "output.tf"):
+#         with open(filename, "w") as f:
+#             for instance in cls._registry:
+#                 block = instance.hcl_block # type: ignore
+#                 if block:  # Only write non-None blocks
+#                     f.write(block + "\n")
+#                 else:
+#                     logging.warning(f"Skipping None block for instance: {instance}")
+
+# # Generalized Decorator
+# def hcl_block(block_type: BlockType, type: Optional[str] = None, reference_name: Optional[str] = None):
+#     def decorator(cls):
+#         cls._hcl_block = PrivateAttr()
+
+#         original_init = cls.__init__
+#         def new_init(self, *args, **kwargs):
+#             original_init(self, *args, **kwargs)
+#             hcl_base = HclBase(block_type)
+#             self._hcl_block = hcl_base.generate_block(self, type, reference_name)
+#             HclBlockManager.register(self)
+
+#         @property
+#         def hcl_block(self):
+#             return self._hcl_block
+
+#         cls.__init__ = new_init
+#         cls.hcl_block = hcl_block
+#         return cls
+#     return decorator
+
 def hcl_block(block_type: BlockType, type: Optional[str] = None, reference_name: Optional[str] = None):
     def decorator(cls):
         cls._hcl_block = PrivateAttr()
@@ -157,7 +216,6 @@ def hcl_block(block_type: BlockType, type: Optional[str] = None, reference_name:
             original_init(self, *args, **kwargs)
             hcl_base = HclBase(block_type)
             self._hcl_block = hcl_base.generate_block(self, type, reference_name)
-            HclBlockManager.register(self)
 
         @property
         def hcl_block(self):
