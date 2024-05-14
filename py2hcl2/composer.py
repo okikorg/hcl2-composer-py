@@ -123,42 +123,47 @@ class HclBase:
 
 
 class HclBlockManager:
-    _registry: List[BaseModel] = []
-
     def __init__(self):
-        self._registry = []
+        self._blocks = []  # This will hold HCL block strings directly
         self.debug = False
 
     def set_debug(self, debug: bool):
         self.debug = debug
-        if self.debug:
-            logging.getLogger().setLevel("DEBUG")
-        else:
-            logging.getLogger().setLevel("INFO")
+        logging.basicConfig(level=logging.DEBUG if debug else logging.INFO)
 
     def __iadd__(self, instance: BaseModel):
         self.register(instance)
         return self
 
     def register(self, instance: BaseModel):
-        if instance not in self._registry:  # Prevent adding the same instance twice
-            self._registry.append(instance)
-
-    def export(self, filename: str = "output.tf"):
-        with open(filename, "w") as f:
-            self.write_blocks(f)
+        # Extract HCL block from instance and add to blocks list
+        block = instance.hcl_block if hasattr(instance, 'hcl_block') else None
+        if block:
+            self._blocks.append(block)
+        else:
+            logging.warning("Instance does not have a valid HCL block to add.")
+        return self
 
     def append(self, filename: str):
-        with open(filename, "a") as f:  # Open the file in append mode
-            self.write_blocks(f)
+        # Read the contents of the file and store them
+        try:
+            with open(filename, 'r') as file:
+                contents = file.read()
+                self._blocks.append(contents)
+        except IOError as e:
+            logging.error(f"Failed to read file {filename}: {e}")
+        return self
 
-    def write_blocks(self, file):
-        for instance in self._registry:
-            block = instance.hcl_block  # Assume each BaseModel has an hcl_block property
-            if block:  # Only write non-None blocks
-                file.write(block + "\n")
-            else:
-                logging.warning(f"Skipping None block for instance: {instance}")
+    def write(self, destination: str):
+        # Write all accumulated blocks to the specified destination file
+        try:
+            with open(destination, 'w') as file:
+                for block in self._blocks:
+                    file.write(block + "\n")
+            logging.info(f"Successfully wrote combined HCL blocks to {destination}")
+        except IOError as e:
+            logging.error(f"Failed to write to file {destination}: {e}")
+        return self
 
 # class HclBlockManager:
 #     _registry: List[BaseModel] = []
