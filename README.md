@@ -44,3 +44,25 @@ variable "instance_count" {
 ## Features
 `HclBlockManager`: Manages registration and export of all HCL blocks.
 `hcl_block` Decorator: Generalized for all BlockType values, registers instances with HclBlockManager, and provides a hcl_block property for easy access.
+
+## Installation
+```bash
+git clone https://github.com/okikorg/py2hcl2.git
+pip install ./py2hcl2
+```
+
+## Usage
+1. Define a class with the `@hcl_block` decorator.
+2. Define the class attributes as the block attributes.
+3. Instantiate the class with the desired values.
+4. Export the blocks to a .tf file using `HclBlockManager.export("output.tf")`.
+
+## Providers
+WIP
+We wish to add more providers for composing `*.tf` files. Some of the providers we wish to add are:
+- [] aws
+- [] azure
+- [] gcp
+
+## Contributing
+We welcome contributions to this project. Please fork the repository and submit a PR.
