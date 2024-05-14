@@ -74,11 +74,7 @@ class HclBase:
         dict_str = f'  {field_name} {{\n'
         for k, v in value_dict.items():
             if isinstance(v, dict):
-                # Starting block for the dictionary with '=' sign
-                dict_str += f'    {k} = {{\n'
-                for sub_k, sub_v in v.items():
-                    dict_str += f'      {sub_k} = {self.format_value(sub_v)}\n'
-                dict_str += "    }\n"
+                dict_str += self.generate_dict_block(k, v)
             else:
                 dict_str += f'    {k} = {self.format_value(v)}\n'
         dict_str += "  }\n"
@@ -115,7 +111,7 @@ class HclBlockManager:
     def export(cls, filename: str = "output.tf"):
         with open(filename, "w") as f:
             for instance in cls._registry:
-                block = instance.hcl_block
+                block = instance.hcl_block # type: ignore
                 if block:  # Only write non-None blocks
                     f.write(block + "\n")
                 else:
