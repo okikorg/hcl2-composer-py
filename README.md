@@ -60,9 +60,9 @@ pip install ./py2hcl2
 ## Providers
 WIP
 We wish to add more providers for composing `*.tf` files. Some of the providers we wish to add are:
--[] aws
--[] azure
--[] gcp
+- aws
+- azure
+- gcp
 
 ## Contributing
 We welcome contributions to this project. Please fork the repository and submit a PR.
