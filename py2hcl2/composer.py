@@ -70,26 +70,56 @@ class HclBase:
         nested_str += "  }\n"
         return nested_str
 
+    # def generate_dict_block(self, field_name: str, value_dict: Dict[str, Any]) -> str:
+    #     dict_str = f'  {field_name} {{\n'
+    #     for k, v in value_dict.items():
+    #         if isinstance(v, dict):
+    #             dict_str += self.generate_dict_block(k, v)
+    #         else:
+    #             dict_str += f'    {k} = {self.format_value(v)}\n'
+    #     dict_str += "  }\n"
+    #     return dict_str
+
     def generate_dict_block(self, field_name: str, value_dict: Dict[str, Any]) -> str:
-        dict_str = f'  {field_name} {{\n'
-        for k, v in value_dict.items():
-            if isinstance(v, dict):
-                dict_str += self.generate_dict_block(k, v)
+        # Initialize the block string
+        block_str = f"  {field_name} {{\n"
+
+        for key, value in value_dict.items():
+            if isinstance(value, dict):
+                # Recursively handle nested dictionaries
+                # Note: No '=' sign is used before the opening brace for nested blocks
+                nested_block = self.generate_dict_block(key, value)
+                block_str += f"    {nested_block}\n"
             else:
-                dict_str += f'    {k} = {self.format_value(v)}\n'
-        dict_str += "  }\n"
-        return dict_str
+                # Handle simple key-value pairs with the '=' sign
+                formatted_value = self.format_value(value)
+                block_str += f"    {key} = {formatted_value}\n"
+
+        block_str += "  }\n"
+        return block_str
+
+    # def format_value(self, value: Any) -> str:
+    #     if isinstance(value, str):
+    #         if value.startswith("file(") or value.startswith("data."):
+    #             return value
+    #         return f'"{value}"'
+    #     if isinstance(value, bool):
+    #         return str(value).lower()
+    #     if isinstance(value, int):
+    #         return str(value)
+    #     return f'"{value}"'
 
     def format_value(self, value: Any) -> str:
         if isinstance(value, str):
-            if value.startswith("file(") or value.startswith("data."):
-                return value
-            return f'"{value}"'
-        if isinstance(value, bool):
+            if value.startswith("file(") or "data." in value:
+                return value  # Return references as-is
+            return f'"{value}"'  # Return other strings in quotes
+        elif isinstance(value, bool):
             return str(value).lower()
-        if isinstance(value, int):
+        elif isinstance(value, (int, float)):
             return str(value)
-        return f'"{value}"'
+        else:
+            raise TypeError(f"Unsupported type for value formatting: {type(value)}")
 
 class HclBlockManager:
     _registry: List[BaseModel] = []
