@@ -3,6 +3,8 @@ from typing import List
 from pydantic import BaseModel
 from rich import print
 
+hcl_manager = HclBlockManager()
+
 @hcl_block(block_type=BlockType.RESOURCE, type="ec2-instance", reference_name="vm1")
 class Resource(BaseModel):
     cores: int
@@ -15,8 +17,8 @@ class InstanceCount(BaseModel):
     default: List[int]
 
 # Instantiating the classes
-resource_instance = Resource(cores=2, memory=4)
-instance_count = InstanceCount(description="Number of instances to create", type="number", default=[1])
+hcl_manager += Resource(cores=2, memory=4)
+hcl_manager += InstanceCount(description="Number of instances to create", type="number", default=[1])
 
 # Export all blocks to a single .tf file
-HclBlockManager.export("output.tf")
+hcl_manager.write('./main.tf')

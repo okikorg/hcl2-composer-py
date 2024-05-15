@@ -70,16 +70,6 @@ class HclBase:
         nested_str += "  }\n"
         return nested_str
 
-    # def generate_dict_block(self, field_name: str, value_dict: Dict[str, Any]) -> str:
-    #     dict_str = f'  {field_name} {{\n'
-    #     for k, v in value_dict.items():
-    #         if isinstance(v, dict):
-    #             dict_str += self.generate_dict_block(k, v)
-    #         else:
-    #             dict_str += f'    {k} = {self.format_value(v)}\n'
-    #     dict_str += "  }\n"
-    #     return dict_str
-
     def generate_dict_block(self, field_name: str, value_dict: Dict[str, Any]) -> str:
         # Initialize the block string
         block_str = f"  {field_name} {{\n"
@@ -98,17 +88,6 @@ class HclBase:
         block_str += "  }\n"
         return block_str
 
-    # def format_value(self, value: Any) -> str:
-    #     if isinstance(value, str):
-    #         if value.startswith("file(") or value.startswith("data."):
-    #             return value
-    #         return f'"{value}"'
-    #     if isinstance(value, bool):
-    #         return str(value).lower()
-    #     if isinstance(value, int):
-    #         return str(value)
-    #     return f'"{value}"'
-
     def format_value(self, value: Any) -> str:
         if isinstance(value, str):
             if value.startswith("file(") or "data." in value:
@@ -126,6 +105,8 @@ class HclBlockManager:
     def __init__(self):
         self._blocks = []  # This will hold HCL block strings directly
         self.debug = False
+        self._blocks = []
+        self.actions = []  # Store actions to be performed on file write
 
     def set_debug(self, debug: bool):
         self.debug = debug
@@ -145,17 +126,24 @@ class HclBlockManager:
         return self
 
     def append(self, filename: str):
-        # Read the contents of the file and store them
-        try:
-            with open(filename, 'r') as file:
-                contents = file.read()
-                self._blocks.append(contents)
-        except IOError as e:
-            logging.error(f"Failed to read file {filename}: {e}")
-        return self
+            # Define the action for appending file content to blocks
+            def action():
+                try:
+                    with open(filename, 'r') as file:
+                        contents = file.read()
+                        self._blocks.append(contents)  # Append content to the block list
+                except IOError as e:
+                    logging.error(f"Failed to read file {filename}: {e}")
+
+            self.actions.append(action)  # Add this action to the list of actions
+            return self
 
     def write(self, destination: str):
-        # Write all accumulated blocks to the specified destination file
+        # Execute all actions in the order they were added
+        for action in self.actions:
+            action()  # Each action modifies self._blocks as needed
+
+        # Now write all accumulated blocks to the specified destination file
         try:
             with open(destination, 'w') as file:
                 for block in self._blocks:
@@ -163,54 +151,10 @@ class HclBlockManager:
             logging.info(f"Successfully wrote combined HCL blocks to {destination}")
         except IOError as e:
             logging.error(f"Failed to write to file {destination}: {e}")
+
+        self._blocks = []  # Optionally clear blocks after writing
+        self.actions = []  # Clear actions after execution
         return self
-
-# class HclBlockManager:
-#     _registry: List[BaseModel] = []
-#     debug = False
-
-#     @classmethod
-#     def set_debug(cls, debug: bool):
-#         cls.debug = debug
-#         if cls.debug:
-#             logging.getLogger().setLevel("DEBUG")
-#         else:
-#             logging.getLogger().setLevel("INFO")
-
-#     @classmethod
-#     def register(cls, instance: BaseModel):
-#         cls._registry.append(instance)
-
-#     @classmethod
-#     def export(cls, filename: str = "output.tf"):
-#         with open(filename, "w") as f:
-#             for instance in cls._registry:
-#                 block = instance.hcl_block # type: ignore
-#                 if block:  # Only write non-None blocks
-#                     f.write(block + "\n")
-#                 else:
-#                     logging.warning(f"Skipping None block for instance: {instance}")
-
-# # Generalized Decorator
-# def hcl_block(block_type: BlockType, type: Optional[str] = None, reference_name: Optional[str] = None):
-#     def decorator(cls):
-#         cls._hcl_block = PrivateAttr()
-
-#         original_init = cls.__init__
-#         def new_init(self, *args, **kwargs):
-#             original_init(self, *args, **kwargs)
-#             hcl_base = HclBase(block_type)
-#             self._hcl_block = hcl_base.generate_block(self, type, reference_name)
-#             HclBlockManager.register(self)
-
-#         @property
-#         def hcl_block(self):
-#             return self._hcl_block
-
-#         cls.__init__ = new_init
-#         cls.hcl_block = hcl_block
-#         return cls
-#     return decorator
 
 def hcl_block(block_type: BlockType, type: Optional[str] = None, reference_name: Optional[str] = None):
     def decorator(cls):
